@@ -8,17 +8,21 @@ from PIL import Image
 import skimage as sk
 from skimage.filters import gaussian
 from io import BytesIO
-from wand.image import Image as WandImage
-from wand.api import library as wandlibrary
-import wand.color as WandColor
+try:
+    from wand.image import Image as WandImage
+    from wand.api import library as wandlibrary
+    import wand.color as WandColor
+except (ImportError, OSError):
+    WandImage = None
+    wandlibrary = None
+    WandColor = None
 import ctypes
 from PIL import Image as PILImage
 import cv2
 from scipy.ndimage import zoom as scizoom
-from scipy.ndimage.interpolation import map_coordinates
+from scipy.ndimage import map_coordinates
 import warnings
 import os
-from pkg_resources import resource_filename
 
 warnings.simplefilter("ignore", UserWarning)
 
@@ -39,16 +43,22 @@ def disk(radius, alias_blur=0.1, dtype=np.float32):
 
 
 # Tell Python about the C method
-wandlibrary.MagickMotionBlurImage.argtypes = (ctypes.c_void_p,  # wand
-                                              ctypes.c_double,  # radius
-                                              ctypes.c_double,  # sigma
-                                              ctypes.c_double)  # angle
+if wandlibrary is not None:
+    wandlibrary.MagickMotionBlurImage.argtypes = (ctypes.c_void_p,  # wand
+                                                  ctypes.c_double,  # radius
+                                                  ctypes.c_double,  # sigma
+                                                  ctypes.c_double)  # angle
 
 
 # Extend wand.image.Image class to include method signature
-class MotionImage(WandImage):
-    def motion_blur(self, radius=0.0, sigma=0.0, angle=0.0):
-        wandlibrary.MagickMotionBlurImage(self.wand, radius, sigma, angle)
+if WandImage is not None:
+    class MotionImage(WandImage):
+        def motion_blur(self, radius=0.0, sigma=0.0, angle=0.0):
+            wandlibrary.MagickMotionBlurImage(self.wand, radius, sigma, angle)
+else:
+    class MotionImage:
+        def __init__(self, blob=None):
+            raise ImportError("Wand/ImageMagick is not installed. motion_blur and snow corruptions are unavailable.")
 
 
 # modification of https://github.com/FLHerne/mapgen/blob/master/diamondsquare.py
@@ -59,7 +69,7 @@ def plasma_fractal(mapsize=256, wibbledecay=3):
     'mapsize' must be a power of two.
     """
     assert (mapsize & (mapsize - 1) == 0)
-    maparray = np.empty((mapsize, mapsize), dtype=np.float_)
+    maparray = np.empty((mapsize, mapsize), dtype=np.float64)
     maparray[0, 0] = 0
     stepsize = mapsize
     wibble = 100
@@ -162,7 +172,7 @@ def fgsm(x, source_net, severity=1):
 def gaussian_blur(x, severity=1):
     c = [1, 2, 3, 4, 6][severity - 1]
 
-    x = gaussian(np.array(x) / 255., sigma=c, multichannel=True)
+    x = gaussian(np.array(x) / 255., sigma=c, channel_axis=-1)
     return np.clip(x, 0, 1) * 255
 
 
@@ -170,7 +180,7 @@ def glass_blur(x, severity=1):
     # sigma, max_delta, iterations
     c = [(0.7, 1, 2), (0.9, 2, 1), (1, 2, 3), (1.1, 3, 2), (1.5, 4, 2)][severity - 1]
 
-    x = np.uint8(gaussian(np.array(x) / 255., sigma=c[0], multichannel=True) * 255)
+    x = np.uint8(gaussian(np.array(x) / 255., sigma=c[0], channel_axis=-1) * 255)
 
     # locally shuffle pixels
     for i in range(c[2]):
@@ -181,7 +191,7 @@ def glass_blur(x, severity=1):
                 # swap
                 x[h, w], x[h_prime, w_prime] = x[h_prime, w_prime], x[h, w]
 
-    return np.clip(gaussian(x / 255., sigma=c[0], multichannel=True), 0, 1) * 255
+    return np.clip(gaussian(x / 255., sigma=c[0], channel_axis=-1), 0, 1) * 255
 
 
 def defocus_blur(x, severity=1):
@@ -207,7 +217,7 @@ def motion_blur(x, severity=1):
 
     x.motion_blur(radius=c[0], sigma=c[1], angle=np.random.uniform(-45, 45))
 
-    x = cv2.imdecode(np.fromstring(x.make_blob(), np.uint8),
+    x = cv2.imdecode(np.frombuffer(x.make_blob(), np.uint8),
                      cv2.IMREAD_UNCHANGED)
 
     if x.shape != (224, 224):
@@ -248,12 +258,12 @@ def frost(x, severity=1):
          (0.65, 0.7),
          (0.6, 0.75)][severity - 1]
     idx = np.random.randint(5)
-    filename = [resource_filename(__name__, 'frost/frost1.png'),
-                resource_filename(__name__, 'frost/frost2.png'),
-                resource_filename(__name__, 'frost/frost3.png'),
-                resource_filename(__name__, 'frost/frost4.jpg'),
-                resource_filename(__name__, 'frost/frost5.jpg'),
-                resource_filename(__name__, 'frost/frost6.jpg')][idx]
+    filename = [os.path.join(os.path.dirname(__file__), 'frost/frost1.png'),
+                os.path.join(os.path.dirname(__file__), 'frost/frost2.png'),
+                os.path.join(os.path.dirname(__file__), 'frost/frost3.png'),
+                os.path.join(os.path.dirname(__file__), 'frost/frost4.jpg'),
+                os.path.join(os.path.dirname(__file__), 'frost/frost5.jpg'),
+                os.path.join(os.path.dirname(__file__), 'frost/frost6.jpg')][idx]
     frost = cv2.imread(filename)
     # randomly crop and convert to rgb
     x_start, y_start = np.random.randint(0, frost.shape[0] - 224), np.random.randint(0, frost.shape[1] - 224)
@@ -282,7 +292,7 @@ def snow(x, severity=1):
 
     snow_layer.motion_blur(radius=c[4], sigma=c[5], angle=np.random.uniform(-135, -45))
 
-    snow_layer = cv2.imdecode(np.fromstring(snow_layer.make_blob(), np.uint8),
+    snow_layer = cv2.imdecode(np.frombuffer(snow_layer.make_blob(), np.uint8),
                               cv2.IMREAD_UNCHANGED) / 255.
     snow_layer = snow_layer[..., np.newaxis]
 

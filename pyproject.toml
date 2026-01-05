@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "corrupt_tta"
-version = "0.1.1"
+version = "0.1.2"
 authors = [
   { name="Manus AI", email="support@manus.im" },
 ]
@@ -27,7 +27,8 @@ dependencies = [
 ]
 
 [project.urls]
-"Homepage" = "https://github.com/YashM8/robustness"
+"Homepage" = "https://github.com/YashM8/robustness/tree/modernize-corruptions"
+"Repository" = "https://github.com/YashM8/robustness/tree/modernize-corruptions"
 
 [tool.setuptools.packages.find]
 where = ["src"]

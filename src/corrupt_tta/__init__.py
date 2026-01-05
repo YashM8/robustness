@@ -31,4 +31,4 @@ def corrupt(x, severity=1, corruption_name=None, corruption_number=-1):
     else:
         raise ValueError("Either corruption_name or corruption_number must be specified.")
 
-__version__ = "0.1.1"
+__version__ = "0.1.2"

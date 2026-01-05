@@ -1,0 +1,41 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "imagecorruptions"
+version = "1.1.2"
+authors = [
+  { name="Dan Hendrycks", email="hendrycks@berkeley.edu" },
+  { name="Example Maintainer", email="maintainer@example.com" },
+]
+description = "A library for applying common image corruptions (ImageNet-C) to benchmark robustness."
+readme = "README.md"
+requires-python = ">=3.7"
+license = { text = "Apache-2.0" }
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "Operating System :: OS Independent",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+    "Topic :: Scientific/Engineering :: Image Processing",
+]
+dependencies = [
+    "numpy>=1.18",
+    "scikit-image>=0.19",
+    "scipy>=1.0",
+    "opencv-python-headless>=3.4",
+    "Pillow>=8.0"
+]
+
+[project.optional-dependencies]
+wand = ["Wand>=0.6"]
+
+[project.urls]
+"Homepage" = "https://github.com/hendrycks/robustness"
+"Bug Tracker" = "https://github.com/hendrycks/robustness/issues"
+
+[tool.setuptools]
+packages = ["imagecorruptions", "imagecorruptions.frost"]
+
+[tool.setuptools.package-data]
+"imagecorruptions.frost" = ["*.png", "*.jpg"]

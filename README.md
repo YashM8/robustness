@@ -52,7 +52,7 @@ If you wish to reference this specific implementation, you may also cite:
   title = {corrupt_tta: Modernized ImageNet-C Corruptions Implementation},
   author = {Yash Mali},
   year = {2025},
-  url = {https://github.com/yourname/corrupt_tta}
+  url = {https://github.com/YashM8/robustness}
 }
 ```
 

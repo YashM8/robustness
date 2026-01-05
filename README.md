@@ -32,6 +32,19 @@ Image.fromarray(corrupted_img.astype(np.uint8)).save("corrupted.jpg")
 - **Weather:** `fog`, `frost`, `snow`
 - **Digital:** `contrast`, `brightness`, `saturate`, `jpeg_compression`, `pixelate`, `elastic_transform`
 
+## Citation
+
+If you find this useful in your research, please consider citing:
+
+```bibtex
+@article{hendrycks2019robustness,
+  title={Benchmarking Neural Network Robustness to Common Corruptions and Perturbations},
+  author={Dan Hendrycks and Thomas Dietterich},
+  journal={Proceedings of the International Conference on Learning Representations},
+  year={2019}
+}
+```
+
 ## License
 
 MIT

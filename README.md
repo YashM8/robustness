@@ -34,7 +34,7 @@ Image.fromarray(corrupted_img.astype(np.uint8)).save("corrupted.jpg")
 
 ## Citation
 
-If you find this useful in your research, please consider citing:
+If you find this useful in your research, please consider citing the original paper:
 
 ```bibtex
 @article{hendrycks2019robustness,

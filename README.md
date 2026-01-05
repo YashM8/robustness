@@ -32,6 +32,10 @@ Image.fromarray(corrupted_img.astype(np.uint8)).save("corrupted.jpg")
 - **Weather:** `fog`, `frost`, `snow`
 - **Digital:** `contrast`, `brightness`, `saturate`, `jpeg_compression`, `pixelate`, `elastic_transform`
 
+## Feedack 
+
+Much of this was written by an LLM agent. If you find bugs, please email: yashmali0326@gmail.com
+
 ## Citation
 
 If you find this useful in your research, please consider citing the original paper:

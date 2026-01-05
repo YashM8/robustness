@@ -2,97 +2,69 @@ import sys
 import os
 import numpy as np
 from PIL import Image
-import traceback
+import unittest
 
-# Add the directory containing the package to python path
-sys.path.append(os.path.abspath('ImageNet-C/imagenet_c'))
-
+# Try to import the package. If it fails, add the parent directory to sys.path
 try:
-    from imagenet_c import corruptions
-    print("Successfully imported corruptions module.")
-except Exception as e:
-    print(f"Failed to import corruptions module: {e}")
-    traceback.print_exc()
-    sys.exit(1)
-
-# Dummy image: 224x224 RGB
-img_np = np.random.randint(0, 255, (224, 224, 3), dtype=np.uint8)
-img_pil = Image.fromarray(img_np)
-
-corruption_list = [
-    'gaussian_noise', 'shot_noise', 'impulse_noise', 'speckle_noise',
-    'gaussian_blur', 'glass_blur', 'defocus_blur', 'motion_blur', 'zoom_blur',
-    'fog', 'frost', 'snow', 'spatter',
-    'contrast', 'brightness', 'saturate', 'jpeg_compression', 'pixelate',
-    'elastic_transform'
-]
-
-# Note: fgsm requires a model, so we skip it for this basic test.
-
-passed = 0
-skipped = 0
-failed = 0
-
-print("\nRunning corruption tests...")
-print("-" * 50)
-
-for name in corruption_list:
-    if not hasattr(corruptions, name):
-        print(f"[FAIL] {name}: Function not found in module.")
-        failed += 1
-        continue
-
-    func = getattr(corruptions, name)
-    print(f"Testing {name}...", end=" ")
-
+    from imagenet_c import corrupt, corruption_dict
+except ImportError:
+    # Assuming this script is at ImageNet-C/imagenet_c/tests/test_corruptions.py
+    # We want to add ImageNet-C/imagenet_c to sys.path
+    project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), '../'))
+    sys.path.append(project_root)
     try:
-        # Some corruptions expect PIL image, some numpy array.
-        # The original `corrupt` wrapper in __init__.py handles this usually.
-        # But we are testing corruptions.py directly.
-        # Looking at code:
-        # Most take 'x'.
-        # jpeg_compression takes x and calls x.save(), so expects PIL.
-        # motion_blur takes x and calls x.save(), so expects PIL.
-        # pixelate takes x and calls x.resize(), so expects PIL.
-        # others usually do np.array(x).
+        from imagenet_c import corrupt, corruption_dict
+    except ImportError:
+        print("Failed to import imagenet_c. Please ensure the package is installed or set PYTHONPATH.")
+        sys.exit(1)
 
-        if name in ['jpeg_compression', 'motion_blur', 'pixelate']:
-            inp = img_pil
-        else:
-            inp = img_np # or PIL, np.array(PIL) works fine.
+class TestCorruptions(unittest.TestCase):
+    def setUp(self):
+        # Create a dummy image: 224x224 RGB
+        self.img_np = np.random.randint(0, 255, (224, 224, 3), dtype=np.uint8)
+        self.supported_corruptions = list(corruption_dict.keys())
 
-        # frost expects resource files, hopefully they are found.
-        # frost uses resource_filename which should work if pkg_resources is happy,
-        # otherwise we might need to mock or ensure files exist relative to execution.
+    def test_all_severities(self):
+        """Test all corruptions across all severity levels (1-5)."""
+        for name in self.supported_corruptions:
+            with self.subTest(corruption=name):
+                # Check for skipped dependencies (wand)
+                try:
+                    # Check if the function raises the specific ImportError for wand
+                    corruption_dict[name](Image.fromarray(self.img_np), severity=1)
+                except ImportError as e:
+                    if "Wand/ImageMagick" in str(e):
+                        print(f"Skipping {name}: {e}")
+                        continue
+                    else:
+                        raise e
+                except Exception as e:
+                    self.fail(f"{name} (sev=1) failed with error: {e}")
 
-        out = func(inp, severity=1)
+                for severity in range(1, 6):
+                    try:
+                        out = corrupt(self.img_np, severity=severity, corruption_name=name)
 
-        # Check output
-        if isinstance(out, Image.Image):
-            out = np.array(out)
+                        self.assertIsInstance(out, np.ndarray, f"{name} sev={severity} did not return numpy array")
+                        self.assertEqual(out.dtype, np.uint8, f"{name} sev={severity} did not return uint8")
+                        self.assertEqual(out.shape, (224, 224, 3), f"{name} sev={severity} output shape mismatch")
 
-        if out.shape != (224, 224, 3):
-            print(f"[FAIL] Output shape mismatch: {out.shape}")
-            failed += 1
-        else:
-            print("[PASS]")
-            passed += 1
+                    except Exception as e:
+                         self.fail(f"{name} severity={severity} failed: {e}")
 
-    except ImportError as e:
-        if "Wand/ImageMagick" in str(e):
-            print(f"[SKIP] Missing dependency: {e}")
-            skipped += 1
-        else:
-            print(f"[FAIL] ImportError: {e}")
-            traceback.print_exc()
-            failed += 1
-    except Exception as e:
-        print(f"[FAIL] Error: {e}")
-        traceback.print_exc()
-        failed += 1
+    def test_corrupt_api_inputs(self):
+        """Test corrupt() function API inputs."""
+        # Test valid inputs with name
+        out = corrupt(self.img_np, severity=1, corruption_name='gaussian_noise')
+        self.assertEqual(out.shape, (224, 224, 3))
 
-print("-" * 50)
-print(f"Tests Completed. Passed: {passed}, Skipped: {skipped}, Failed: {failed}")
+        # Test integer index
+        out_idx = corrupt(self.img_np, severity=1, corruption_number=0)
+        self.assertEqual(out_idx.shape, (224, 224, 3))
 
-if failed > 0:
-    sys.exit(1)
+        # Test missing arguments
+        with self.assertRaises(ValueError):
+            corrupt(self.img_np, severity=1)
+
+if __name__ == '__main__':
+    unittest.main()

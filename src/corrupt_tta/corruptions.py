@@ -178,10 +178,12 @@ def frost(x, severity=1):
     ext = 'png' if idx <= 3 else 'jpg'
     
     try:
-        with resources.path('corrupt_tta.assets.frost', f'frost{idx}.{ext}') as path:
+        # Modern way to access package resources
+        resource_path = resources.files('corrupt_tta.assets.frost').joinpath(f'frost{idx}.{ext}')
+        with resources.as_file(resource_path) as path:
             frost_img = cv2.imread(str(path))
-    except (ImportError, FileNotFoundError):
-        # Fallback for local testing if not installed as package
+    except (ImportError, AttributeError, FileNotFoundError):
+        # Fallback for older Python versions or local testing
         asset_path = os.path.join(os.path.dirname(__file__), 'assets', 'frost', f'frost{idx}.{ext}')
         frost_img = cv2.imread(asset_path)
         

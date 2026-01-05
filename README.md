@@ -45,6 +45,15 @@ If you find this useful in your research, please consider citing the original pa
 }
 ```
 
-## License
+If you wish to reference this specific implementation, you may also cite:
 
-MIT
+```bibtex
+@software{corrupt_tta,
+  title = {corrupt_tta: Modernized ImageNet-C Corruptions Implementation},
+  author = {Yash Mali},
+  year = {2025},
+  url = {https://github.com/yourname/corrupt_tta}
+}
+```
+
+

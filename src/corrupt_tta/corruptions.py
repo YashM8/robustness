@@ -123,15 +123,23 @@ def gaussian_blur(x, severity=1):
     return np.clip(x, 0, 1) * 255
 
 def glass_blur(x, severity=1):
+    # sigma, max_delta, iterations
     c = [(0.7, 1, 2), (0.9, 2, 1), (1, 2, 3), (1.1, 3, 2), (1.5, 4, 2)][severity - 1]
-    h, w = np.array(x).shape[:2]
     x = np.uint8(gaussian(np.array(x) / 255., sigma=c[0], channel_axis=-1) * 255)
+    h, w = x.shape[:2]
+
     for i in range(c[2]):
-        for row in range(h - c[1], c[1], -1):
-            for col in range(w - c[1], c[1], -1):
-                dx, dy = np.random.randint(-c[1], c[1], size=(2,))
-                row_prime, col_prime = row + dy, col + dx
-                x[row, col], x[row_prime, col_prime] = x[row_prime, col_prime], x[row, col]
+        # Optimized: pre-generate all random shifts for the entire image
+        dxs = np.random.randint(-c[1], c[1], size=(h, w))
+        dys = np.random.randint(-c[1], c[1], size=(h, w))
+        
+        for row in range(c[1], h - c[1]):
+            for col in range(c[1], w - c[1]):
+                row_prime, col_prime = row + dys[row, col], col + dxs[row, col]
+                # Swap pixels
+                tmp = x[row, col].copy()
+                x[row, col] = x[row_prime, col_prime]
+                x[row_prime, col_prime] = tmp
     return np.clip(gaussian(x / 255., sigma=c[0], channel_axis=-1), 0, 1) * 255
 
 def defocus_blur(x, severity=1):
@@ -224,18 +232,20 @@ def contrast(x, severity=1):
 
 def brightness(x, severity=1):
     c = [.1, .2, .3, .4, .5][severity - 1]
-    x = np.array(x) / 255.
-    x = rgb2hsv(x)
+    x = np.array(x, dtype=np.float32) / 255.
+    # Optimized: Use OpenCV for much faster color space conversion
+    x = cv2.cvtColor(x, cv2.COLOR_RGB2HSV)
     x[:, :, 2] = np.clip(x[:, :, 2] + c, 0, 1)
-    x = hsv2rgb(x)
+    x = cv2.cvtColor(x, cv2.COLOR_HSV2RGB)
     return np.clip(x, 0, 1) * 255
 
 def saturate(x, severity=1):
     c = [(0.3, 0), (0.1, 0), (2, 0), (5, 0.1), (20, 0.2)][severity - 1]
-    x = np.array(x) / 255.
-    x = rgb2hsv(x)
+    x = np.array(x, dtype=np.float32) / 255.
+    # Optimized: Use OpenCV for much faster color space conversion
+    x = cv2.cvtColor(x, cv2.COLOR_RGB2HSV)
     x[:, :, 1] = np.clip(x[:, :, 1] * c[0] + c[1], 0, 1)
-    x = hsv2rgb(x)
+    x = cv2.cvtColor(x, cv2.COLOR_HSV2RGB)
     return np.clip(x, 0, 1) * 255
 
 def jpeg_compression(x, severity=1):

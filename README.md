@@ -1,11 +1,11 @@
-# corrupt_tta
+# corrupt-tta
 
-`corrupt_tta` is a modernized Python library for applying image corruptions, based on the original ImageNet-C benchmark. It has been rewritten to use modern APIs (OpenCV, Scikit-Image, NumPy) and removes outdated dependencies like `Wand` (ImageMagick).
+`corrupt-tta` is a modernized Python library for applying image corruptions, based on the original ImageNet-C benchmark. It has been rewritten to use modern APIs (OpenCV, Scikit-Image, NumPy) and removes outdated dependencies like `Wand` (ImageMagick).
 
 ## Installation
 
 ```bash
-pip install corrupt_tta
+pip install corrupt-tta
 ```
 
 ## Usage
@@ -32,7 +32,7 @@ Image.fromarray(corrupted_img.astype(np.uint8)).save("corrupted.jpg")
 - **Weather:** `fog`, `frost`, `snow`
 - **Digital:** `contrast`, `brightness`, `saturate`, `jpeg_compression`, `pixelate`, `elastic_transform`
 
-## Feedack 
+## Feedback 
 
 Much of this was written by an LLM agent. If you find bugs, please email: yashmali0326@gmail.com
 
@@ -59,5 +59,4 @@ If you wish to reference this specific implementation, you may also cite:
   url = {https://github.com/YashM8/robustness}
 }
 ```
-
 

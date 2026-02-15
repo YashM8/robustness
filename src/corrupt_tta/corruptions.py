@@ -199,8 +199,18 @@ def frost(x, severity=1):
         return np.array(x) # Fallback if asset missing
         
     h, w = np.array(x).shape[:2]
-    x_start = np.random.randint(0, frost_img.shape[0] - h)
-    y_start = np.random.randint(0, frost_img.shape[1] - w)
+    fh, fw = frost_img.shape[:2]
+
+    # Ensure the frost texture covers the target image before random cropping.
+    if fh < h or fw < w:
+        scale = max(h / fh, w / fw)
+        new_w = int(np.ceil(fw * scale))
+        new_h = int(np.ceil(fh * scale))
+        frost_img = cv2.resize(frost_img, (new_w, new_h), interpolation=cv2.INTER_LINEAR)
+        fh, fw = frost_img.shape[:2]
+
+    x_start = np.random.randint(0, max(1, fh - h + 1))
+    y_start = np.random.randint(0, max(1, fw - w + 1))
     frost_img = frost_img[x_start:x_start + h, y_start:y_start + w][..., [2, 1, 0]]
     return np.clip(c[0] * np.array(x) + c[1] * frost_img, 0, 255)
 
@@ -223,6 +233,33 @@ def snow(x, severity=1):
     gray = cv2.cvtColor(x, cv2.COLOR_RGB2GRAY).reshape(h, w, 1)
     x = c[6] * x + (1 - c[6]) * np.maximum(x, gray * 1.5 + 0.5)
     return np.clip(x + snow_layer + np.rot90(snow_layer, k=2), 0, 1) * 255
+
+def spatter(x, severity=1):
+    # threshold, blur_sigma, blend_strength
+    c = [(0.80, 1.0, 0.35),
+         (0.75, 1.2, 0.45),
+         (0.70, 1.5, 0.55),
+         (0.67, 1.8, 0.65),
+         (0.64, 2.2, 0.75)][severity - 1]
+
+    x = np.array(x, dtype=np.float32) / 255.
+    h, w = x.shape[:2]
+
+    # Build a smooth stochastic mask to simulate droplets/splatters.
+    liquid = np.random.normal(size=(h, w)).astype(np.float32)
+    liquid = gaussian(liquid, sigma=c[1], mode='reflect')
+    liquid -= liquid.min()
+    liquid /= (liquid.max() + 1e-8)
+
+    mask = (liquid > c[0]).astype(np.float32)
+    mask = cv2.GaussianBlur(mask, (0, 0), sigmaX=max(0.5, c[1] / 2.0))
+    mask = np.clip(mask, 0, 1)
+
+    # Mud-like brown tint for spatter.
+    mud = np.array([63, 42, 20], dtype=np.float32) / 255.
+    mask3 = mask[..., np.newaxis]
+    res = x * (1 - c[2] * mask3) + mud * (c[2] * mask3)
+    return np.clip(res, 0, 1) * 255
 
 def contrast(x, severity=1):
     c = [0.4, .3, .2, .1, .05][severity - 1]
